@@ -1,5 +1,5 @@
 /**
- * Created by Aldor on 18.05.2016.
+ * My class to test various OOP concepts
  */
 
 import java.io.*;
@@ -20,9 +20,9 @@ public class MyClass {
         String s1 = readln();
         String s2 = readln();
 
-        System.out.println("s1 = " + s1 + ", s2 = " + s2);
+        writeln("s1 = " + s1 + ", s2 = " + s2);
 
-        System.out.println("Hex -1 = " + Integer.toHexString(-1));
+        writeln("Hex -1 = " + Integer.toHexString(-1));
 
         byte _b1 = (byte)Integer.parseInt(s1);
         byte _b2 = (byte)Integer.parseInt(s2);
@@ -33,5 +33,8 @@ public class MyClass {
         Byte b4 = 10;
 
         writeln("b1=b2? " + (b1 == b2));
-        writeln("b3=b4? " + (b3 == b4));    }
+        writeln("b3=b4? " + (b3 == b4));
+
+
+    }
 }
