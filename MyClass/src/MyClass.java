@@ -4,42 +4,21 @@
 
 import java.io.*;
 
-class IOHelper {
-   public static void writeln(Object[] args) {
-        System.out.println(args);
-    }
-    public static String readln() {
-        String s="";
-        try {
-            s = br.readLine();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return s;
-    }
-
-    private void IOHelper() {}
-    private static BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-}
+import static IOHelp.IOHelper.readln;
+import static IOHelp.IOHelper.writeln;
 
 public class MyClass {
     private PrintStream out;
 
     public static void main(String[] args) {
-        System.out.println("Hello there!");
+        writeln("Hello there!");
 
         int a=1, b=2;
-        System.out.println("1/2 = " + a/b);
+        writeln("1/2 = " + a/b);
 
-        BufferedReader bufferRead = new BufferedReader(new InputStreamReader(System.in));
-        String s1 = null, s2=null;
-        System.out.println("Enter 2 numbers:");
-        try {
-            s1 = bufferRead.readLine();
-            s2 = bufferRead.readLine();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        writeln("Enter 2 numbers:");
+        String s1 = readln();
+        String s2 = readln();
 
         System.out.println("s1 = " + s1 + ", s2 = " + s2);
 
@@ -53,6 +32,6 @@ public class MyClass {
         Byte b3 = 10;
         Byte b4 = 10;
 
-        System.out.println("b1=b2? " + (b1 == b2));
-        System.out.println("b3=b4? " + (b3 == b4));    }
+        writeln("b1=b2? " + (b1 == b2));
+        writeln("b3=b4? " + (b3 == b4));    }
 }
