@@ -4,6 +4,24 @@
 
 import java.io.*;
 
+class IOHelper {
+   public static void writeln(Object[] args) {
+        System.out.println(args);
+    }
+    public static String readln() {
+        String s="";
+        try {
+            s = br.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return s;
+    }
+
+    private void IOHelper() {}
+    private static BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+}
+
 public class MyClass {
     private PrintStream out;
 
@@ -15,6 +33,7 @@ public class MyClass {
 
         BufferedReader bufferRead = new BufferedReader(new InputStreamReader(System.in));
         String s1 = null, s2=null;
+        System.out.println("Enter 2 numbers:");
         try {
             s1 = bufferRead.readLine();
             s2 = bufferRead.readLine();
