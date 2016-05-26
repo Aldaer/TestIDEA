@@ -22,6 +22,6 @@ public class IOHelper {
         return s;
     }
 
-    private void IOHelper() {}
+    private IOHelper() {}
     private static BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 }
