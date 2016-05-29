@@ -21,7 +21,6 @@ hs_err_pid*
 out
 gen
 .gitignore
-.idea/
 out/
 bin/
 MyClass/bin/
