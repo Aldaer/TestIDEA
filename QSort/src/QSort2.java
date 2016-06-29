@@ -23,10 +23,11 @@ public class QSort2<T> {
      */
     public Future<T[]> sort(final T[] arrayToSort) {
         a = arrayToSort;
-        if (a == null || a.length == 1) return CompletableFuture.completedFuture(a);
-        int maxThreads = (int) (Math.log(a.length) / Math.log(2));
-        executorService = Executors.newFixedThreadPool(maxThreads);
-        return executorService.submit(new SortingThread(0, a.length - 1), a);
+        if (a == null || a.length <= 1) return CompletableFuture.completedFuture(a);
+        executorService = Executors.newCachedThreadPool();
+  //      return executorService.submit(new SortingThread(0, a.length), a);
+        new SortingThread(0, a.length).run();
+        return CompletableFuture.completedFuture(a);
     }
 
     private T[] a;                                          // Array to sort
@@ -39,26 +40,28 @@ public class QSort2<T> {
     private class SortingThread implements Runnable {
 
         private int stIndex;
-        private int endIndex;
+        private int endIndexP1;
 
-        private SortingThread(int stIndex, int endIndex) {
-            threadNo++;
+        private int thisThreadNo;
+
+        private SortingThread(int stIndex, int endIndexPlus1) {
+            thisThreadNo = ++threadNo;
             this.stIndex = stIndex;
-            this.endIndex = endIndex;
+            this.endIndexP1 = endIndexPlus1;
         }
 
         @Override
         public void run() {
             T side;
             int len;
-            int pivotIndex = endIndex - 1;
-            len = endIndex - stIndex;                   // 1 less than actual length of the array
-            System.out.printf("Thread %d is sorting elements %d to %d\n", threadNo, stIndex, endIndex);
+            int pivotIndex = endIndexP1 - 1;
+            len = endIndexP1 - stIndex;
+            System.out.printf("\nThread %d is sorting array between %d and %d", thisThreadNo, stIndex, pivotIndex);
+  //          if (len <= 0) return;                   // Length 0 and 1 arrays don't need sorting
 
             do {                                        // Main sorting loop
 
-                if (len <= 0) return;                   // Length 0 and 1 arrays don't need sorting
-                if (len == 1) {
+                if (len == 2) {
                     if (cmp.compare(a[pivotIndex], a[stIndex]) < 0) {
                         side = a[pivotIndex];
                         a[pivotIndex] = a[stIndex];
@@ -68,29 +71,26 @@ public class QSort2<T> {
                 }
 
                 for (int i = pivotIndex - 1; i >= stIndex; i--) {
-                    if (cmp.compare(a[pivotIndex], a[i]) < 0) {                     // Increase right partition, move element there
+                    if (cmp.compare(a[pivotIndex], a[i]) < 0) {                // Increase right partition, move element there
                         side = a[pivotIndex];                                       // Pivot element
                         a[pivotIndex--] = a[i];
                         a[i] = a[pivotIndex];
-                        a[pivotIndex] = side;                                       // Everything > pivot is located from [pivotIndex+1] to [endIndex-1]
+                        a[pivotIndex] = side;                                       // Everything > pivot is located from [pivotIndex+1] to [endIndexP1-1]
                     }                                                               // Everything in [stIndex - pivotIndex] is <= pivot
                 }
-                int lenRight = endIndex - (pivotIndex + 1);
+                int lenRight = endIndexP1 - (pivotIndex + 1);
                 int lenLeft = pivotIndex - stIndex + 1;
                 if (lenRight < lenLeft) {
-                    executorService.submit(new SortingThread(pivotIndex + 1, endIndex));
-                    endIndex = pivotIndex--;                        // Re-sort bigger part of the array in the current loop
-                    len = lenLeft;                                  // Continue sorting left partition
+                    if (lenRight > 1) new SortingThread(pivotIndex + 1, endIndexP1).run();
+                    endIndexP1 = pivotIndex--;                          // Re-sort bigger part of the array in the current loop
+                    len = lenLeft;                                      // Continue sorting left partition
                 } else {
-                    executorService.submit(new SortingThread(stIndex, pivotIndex));
+                    if (lenLeft > 1) new SortingThread(stIndex, pivotIndex).run();
                     stIndex = pivotIndex + 1;
-                    pivotIndex = endIndex - 1;                      // Sort right partition in the main loop
-                    len = lenRight;                                 // lenLeft contains length of longest of two subarrays
+                    pivotIndex = endIndexP1 - 1;
+                    len = lenRight;                                             // lenLeft contains length of longest of two subarrays
                 }
-            }
-
-            while (len > 1);
+            } while (len > 1);
         }
     }
-
 }
