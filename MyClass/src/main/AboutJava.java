@@ -1,3 +1,5 @@
+package main;
+
 /**
  * Created by Aldor on 18.05.2016.
  */

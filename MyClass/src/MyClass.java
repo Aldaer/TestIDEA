@@ -2,7 +2,13 @@
  * My class to test various OOP concepts
  */
 
-import java.io.*;
+import java.io.PrintStream;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
+import java.util.Locale;
 
 import static IOHelp.IOHelper.readln;
 import static IOHelp.IOHelper.writeln;
@@ -13,7 +19,7 @@ public class MyClass {
     public static void main(String[] args) {
         writeln("Hello there!");
 
-        int a=1, b=2;
+/*        int a=1, b=2;
         writeln("1/2 = " + a/b);
 
         writeln("Enter 2 numbers:");
@@ -33,7 +39,17 @@ public class MyClass {
         Byte b4 = 10;
 
         writeln("b1=b2? " + (b1 == b2));
-        writeln("b3=b4? " + (b3 == b4));
+        writeln("b3=b4? " + (b3 == b4));*/
+
+        ZonedDateTime zdt = ZonedDateTime.now();
+        DateTimeFormatter ru = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL, FormatStyle.FULL).withLocale(Locale.forLanguageTag("ru")).withZone(ZoneId.of("Europe/Moscow"));
+        DateTimeFormatter fr = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL, FormatStyle.FULL).withLocale(Locale.forLanguageTag("fr")).withZone(ZoneId.of("Europe/Paris"));
+        DateTimeFormatter enuk = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL, FormatStyle.FULL).withLocale(new Locale("en-gb")).withZone(ZoneId.of("GMT"));
+        DateTimeFormatter enus = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL, FormatStyle.FULL).withLocale(new Locale("en-us")).withZone(ZoneId.of("EST", ZoneId.SHORT_IDS));
+        System.out.println(zdt.format(ru));
+        System.out.println(zdt.format(fr));
+        System.out.println(zdt.format(enuk));
+        System.out.println(zdt.format(enus));
 
 
     }
