@@ -19,18 +19,18 @@ public class QSortTest {
         Integer[] a1b = Arrays.copyOf(a1, a1.length);
         Integer[] a2b = Arrays.copyOf(a2, a2.length);
 
-        q.sortArray(a1a, 0, a1a.length - 1);
+        q.sort(a1a);
         System.out.println(Arrays.toString(a1a));
 
-        q.sortArray(a2a, 0, a2a.length - 1);
+        q.sort(a2a);
         System.out.println(Arrays.toString(a2a));
 
         QSort2<Integer> q2 = new QSort2<>((o1, o2) -> o1-o2);
 
         Future<Integer[]> sorter1 = q2.sort(a1b);
-      //  Future<Integer[]> sorter2 = q2.sort(a2b);
+        Future<Integer[]> sorter2 = q2.sort(a2b);
         System.out.print("Asynchronous sorting");
-        while (! (sorter1.isDone()/* && sorter2.isDone()*/)) {
+        while (! (sorter1.isDone() && sorter2.isDone())) {
             System.out.print('.');
             Thread.sleep(200);
         }

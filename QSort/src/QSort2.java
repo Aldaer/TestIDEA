@@ -9,6 +9,7 @@ public class QSort2<T> {
 
     /**
      * Creates a sorter and sets the comparator to use on array elements
+     *
      * @param sortRule Indicates how array elements should be compared
      */
     public QSort2(Comparator<T> sortRule) {
@@ -22,15 +23,13 @@ public class QSort2<T> {
      * @return Future containing sorted array
      */
     public Future<T[]> sort(final T[] arrayToSort) {
-        a = arrayToSort;
-        if (a == null || a.length <= 1) return CompletableFuture.completedFuture(a);
+        if (arrayToSort == null || arrayToSort.length <= 1) return CompletableFuture.completedFuture(arrayToSort);
         executorService = Executors.newCachedThreadPool();
-  //      return executorService.submit(new SortingThread(0, a.length), a);
-        new SortingThread(0, a.length).run();
-        return CompletableFuture.completedFuture(a);
+        return executorService.submit(new SortingThread(arrayToSort, 0, arrayToSort.length), arrayToSort);
+/*        new SortingThread(0, a.length).run();
+        return CompletableFuture.completedFuture(a);*/
     }
 
-    private T[] a;                                          // Array to sort
     private final Comparator<T> cmp;
     private ExecutorService executorService;
 
@@ -38,57 +37,58 @@ public class QSort2<T> {
     private int threadNo = 0;
 
     private class SortingThread implements Runnable {
+        private T[] a;                                          // Array to sort
 
         private int stIndex;
-        private int endIndexP1;
+        private int endIndex;
 
         private int thisThreadNo;
 
-        private SortingThread(int stIndex, int endIndexPlus1) {
+        private SortingThread(T[] arrayToSort, int stIndex, int endIndex) {
+            a = arrayToSort;
             thisThreadNo = ++threadNo;
             this.stIndex = stIndex;
-            this.endIndexP1 = endIndexPlus1;
+            this.endIndex = endIndex;
         }
 
         @Override
         public void run() {
-            T side;
+            T pivot;
             int len;
-            int pivotIndex = endIndexP1 - 1;
-            len = endIndexP1 - stIndex;
-            System.out.printf("\nThread %d is sorting array between %d and %d", thisThreadNo, stIndex, pivotIndex);
-  //          if (len <= 0) return;                   // Length 0 and 1 arrays don't need sorting
+            int pivotIndex = endIndex - 1;
+            len = endIndex - stIndex;
+            System.out.printf("\nThread %d sorts elements in the range of [%d-%d]", thisThreadNo, stIndex, pivotIndex);
 
-            do {                                        // Main sorting loop
+            do {                                          // Main sorting loop
 
+                pivot = a[pivotIndex];
                 if (len == 2) {
-                    if (cmp.compare(a[pivotIndex], a[stIndex]) < 0) {
-                        side = a[pivotIndex];
+                    if (cmp.compare(pivot, a[stIndex]) < 0) {
                         a[pivotIndex] = a[stIndex];
-                        a[stIndex] = side;
+                        a[stIndex] = pivot;
                         return;
                     }
                 }
 
                 for (int i = pivotIndex - 1; i >= stIndex; i--) {
-                    if (cmp.compare(a[pivotIndex], a[i]) < 0) {                // Increase right partition, move element there
-                        side = a[pivotIndex];                                       // Pivot element
+                    if (cmp.compare(pivot, a[i]) < 0) {                // Increase right partition, move element there
                         a[pivotIndex--] = a[i];
                         a[i] = a[pivotIndex];
-                        a[pivotIndex] = side;                                       // Everything > pivot is located from [pivotIndex+1] to [endIndexP1-1]
+                        a[pivotIndex] = pivot;                                      // Everything > pivot is located from [pivotIndex+1] to [endIndex-1]
                     }                                                               // Everything in [stIndex - pivotIndex] is <= pivot
                 }
-                int lenRight = endIndexP1 - (pivotIndex + 1);
-                int lenLeft = pivotIndex - stIndex + 1;
+                int lenRight = endIndex - (pivotIndex + 1);                         // Subarray of big elements, length >=0
+                int lenLeft = pivotIndex - stIndex;                                 // Subarray of small elements, length >=0
                 if (lenRight < lenLeft) {
-                    if (lenRight > 1) new SortingThread(pivotIndex + 1, endIndexP1).run();
-                    endIndexP1 = pivotIndex--;                          // Re-sort bigger part of the array in the current loop
-                    len = lenLeft;                                      // Continue sorting left partition
+                    if (lenRight > 1) executorService.submit(new SortingThread(a, pivotIndex + 1, endIndex));
+                    endIndex = pivotIndex--;                                         // Re-sort bigger part of the array in the current loo
+                                                                                     // New pivot is the element immediately left of the old pivot
+                    len = lenLeft;                                                   // Continue sorting left partition
                 } else {
-                    if (lenLeft > 1) new SortingThread(stIndex, pivotIndex).run();
+                    if (lenLeft > 1) executorService.submit(new SortingThread(a, stIndex, pivotIndex));
                     stIndex = pivotIndex + 1;
-                    pivotIndex = endIndexP1 - 1;
-                    len = lenRight;                                             // lenLeft contains length of longest of two subarrays
+                    pivotIndex = endIndex - 1;
+                    len = lenRight;                                   // lenRight contains length of longest of two subarrays
                 }
             } while (len > 1);
         }
