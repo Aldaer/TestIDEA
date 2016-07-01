@@ -24,3 +24,5 @@ gen
 out/
 bin/
 MyClass/bin/
+million_ints.txt
+*.log

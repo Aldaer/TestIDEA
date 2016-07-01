@@ -1,14 +1,16 @@
 import org.junit.Test;
 
+import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Comparator;
+import java.util.Date;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-
-import static org.junit.Assert.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class QSortTest {
     @Test
-    public void sortArray() throws Exception {
+    public void sortArray() throws InterruptedException, ExecutionException {
         Integer[] a1 = { 8,13,2,10,6,14,4,5,7,12,11,9,3,15,1,0 };
         Integer[] a2 = { 5,2,6,6,1,7,3,3,3,0 };
 
@@ -19,6 +21,7 @@ public class QSortTest {
         Integer[] a1b = Arrays.copyOf(a1, a1.length);
         Integer[] a2b = Arrays.copyOf(a2, a2.length);
 
+        System.out.println("Synchronous sorting");
         q.sort(a1a);
         System.out.println(Arrays.toString(a1a));
 
@@ -31,12 +34,55 @@ public class QSortTest {
         Future<Integer[]> sorter2 = q2.sort(a2b);
         System.out.print("Asynchronous sorting");
         while (! (sorter1.isDone() && sorter2.isDone())) {
+            try {
+                sorter1.get(200, TimeUnit.MILLISECONDS);
+                sorter2.get(200, TimeUnit.MILLISECONDS);
+            } catch (TimeoutException to) {
             System.out.print('.');
-            Thread.sleep(200);
+            }
         }
         System.out.println();
         System.out.println(Arrays.toString(a1b));
         System.out.println(Arrays.toString(a2b));
     }
 
+    @Test
+    public void LargeQSortTest() throws Exception {
+        Integer[] MilInt1;
+        Integer[] MilInt2;
+
+        System.out.println("Current default path is " + Paths.get("").toAbsolutePath().toString());
+        System.out.print("Reading input file");
+        Future<String> ints = TextFileNonblockingIO.readFileIntoString("million_ints.txt");
+        String s;
+        while(true) try {
+            s = ints.get(200, TimeUnit.MILLISECONDS);
+            break;
+        } catch (TimeoutException to) {
+            System.out.print('.');
+        }
+        System.out.println();
+        MilInt1 = Arrays.stream(s.split(",")).map(Integer::valueOf).toArray(Integer[]::new);
+
+        QSort<Integer> qS = new QSort<>((o1, o2) -> o1-o2);
+        QSort2<Integer> qA = new QSort2<>((o1, o2) -> o1-o2);
+
+        System.out.println("Synchronous sorting");
+
+        MilInt2 = Arrays.copyOf(MilInt1, MilInt1.length);
+        long d1 = new Date().getTime();
+        qS.sort(MilInt2);
+        d1 = new Date().getTime() - d1;
+        System.out.printf("Sorting of a %d-element array took %d ms\n", MilInt1.length, d1);
+        TextFileNonblockingIO.writeStringIntoFile("d:\\out_sync.txt", Arrays.toString(MilInt2));
+
+        System.out.println("Asynchronous sorting");
+
+        MilInt2 = Arrays.copyOf(MilInt1, MilInt1.length);
+        d1 = new Date().getTime();
+        qA.sort(MilInt2).get();
+        d1 = new Date().getTime() - d1;
+        System.out.printf("Sorting of the same array took %d ms\n", d1);
+        TextFileNonblockingIO.writeStringIntoFile("d:\\out_async.txt", Arrays.toString(MilInt2)).get();
+    }
 }

@@ -1,3 +1,6 @@
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.Comparator;
 
 /**
@@ -9,23 +12,32 @@ public class QSort<T> {
         cmp = sortRule;
     }
 
+    final static Logger LOG = LogManager.getLogger();
+
     /**
      * Sort array inArray starting at [stIndex] and ending at [endIndex-1]
      */
     public void sort(final T[] arrayToSort) {
         if (arrayToSort == null || arrayToSort.length <= 1) return;
         a = arrayToSort;
+
+        LOG.debug("Now starting to sort array of " + arrayToSort.length + " elements");
+        callNo = 0;
         sortArray(0, a.length);
     }
 
     private T[] a;
     private final Comparator<T> cmp;
+    private int callNo;
 
     private void sortArray(int stIndex, int endIndex) {  // endIndex points TO THE RIGHT of the last array element
         T pivot;
         int len;
-        int pivotIndex = endIndex - 1;
+        int pivotIndex = endIndex - 1;                 // Last element of the range will be the pivot
         len = endIndex - stIndex;
+        int thisCallNo = ++callNo;
+
+        LOG.debug("Launching sort routine #" + thisCallNo + " to sort elements " + stIndex + " to " + (endIndex - 1));
 
         do {                                          // Main sorting loop
 
@@ -34,9 +46,11 @@ public class QSort<T> {
                 if (cmp.compare(pivot, a[stIndex]) < 0) {
                     a[pivotIndex] = a[stIndex];
                     a[stIndex] = pivot;
-                    return;
                 }
+                LOG.debug("Call " + thisCallNo + " returned");
+                return;
             }
+
 
             for (int i = pivotIndex - 1; i >= stIndex; i--) {
                 if (cmp.compare(pivot, a[i]) < 0) {                // Increase right partition, move element there
@@ -50,7 +64,7 @@ public class QSort<T> {
             if (lenRight < lenLeft) {
                 if (lenRight > 1) sortArray(pivotIndex + 1, endIndex);          // Can be launched in another thread
                 endIndex = pivotIndex--;                          // Re-sort bigger part of the array in the current loop
-                                                                  // New pivot is the element immediately left of the old pivot
+                // New pivot is the element immediately left of the old pivot
                 len = lenLeft;                                    // Continue sorting left partition
             } else {
                 if (lenLeft > 1) sortArray(stIndex, pivotIndex);  // Sort right partition in the main loop
@@ -59,5 +73,7 @@ public class QSort<T> {
                 len = lenRight;                                   // lenRight contains length of longest of two subarrays
             }
         } while (len > 1);
+
+        LOG.debug("Call " + thisCallNo + " returned");
     }
 }
