@@ -9,13 +9,15 @@ import java.util.concurrent.*;
 /**
  * 2nd version, with multithreading
  */
+@SuppressWarnings("WeakerAccess")
 public class QSort2<T> {
+    private final static int MIN_ARRAY_TO_CREATE_THREAD = 2_000;    // Determined experimentally
 
     private final Comparator<T> cmp;
     private ForkJoinPool pool;
     private int threadNo;
 
-    final static Logger LOG = LogManager.getLogger();
+    private final static Logger LOG = LogManager.getLogger();
 
     /**
      * Creates a sorter and sets the comparator to use on array elements
@@ -36,27 +38,28 @@ public class QSort2<T> {
 
 
         if (arrayToSort == null || arrayToSort.length <= 1) return CompletableFuture.completedFuture(arrayToSort);
-        pool = new ForkJoinPool(20); //Executors.newSingleThreadExecutor(); // newFixedThreadPool(12); // newSingleThreadExecutor();
+        pool = new ForkJoinPool();
 
-        LOG.debug("Now starting to sort array of " + arrayToSort.length + " elements");
+        if (LOG.isDebugEnabled()) LOG.debug("Now starting to sort array of " + arrayToSort.length + " elements");
         threadNo = 0;
         return pool.submit(new SortingThread(arrayToSort, 0, arrayToSort.length));
     }
 
+    @SuppressWarnings("UnnecessaryLabelOnBreakStatement")
     private class SortingThread extends RecursiveTask<T[]> {
         private T[] a;                                          // Array to sort
 
         private int stIndex;
         private int endIndex;
 
-        private int thisThreadNo;
+        private int thisTaakdNo;
 
         private SortingThread(T[] arrayToSort, int stIndex, int endIndex) {
             a = arrayToSort;
-            thisThreadNo = ++threadNo;
+            thisTaakdNo = ++threadNo;
             this.stIndex = stIndex;
             this.endIndex = endIndex;
-            LOG.debug("Creating thread #" + thisThreadNo + " to sort elements " + stIndex + " to " + (endIndex - 1));
+            if (LOG.isDebugEnabled()) LOG.debug("Creating task #" + thisTaakdNo + " to sort elements " + stIndex + " to " + (endIndex - 1));
         }
 
         @Override
@@ -90,20 +93,26 @@ public class QSort2<T> {
                 int lenRight = endIndex - (pivotIndex + 1);                         // Subarray of big elements, length >=0
                 int lenLeft = pivotIndex - stIndex;                                 // Subarray of small elements, length >=0
                 if (lenRight < lenLeft) {
-                    if (lenRight > 1) childTasks.add(new SortingThread(a, pivotIndex + 1, endIndex).fork());
+                    if (lenRight > 1) {
+                        if (lenRight > MIN_ARRAY_TO_CREATE_THREAD) childTasks.add(new SortingThread(a, pivotIndex + 1, endIndex).fork());
+                        else new SortingThread(a, pivotIndex + 1, endIndex).compute();          // Do not create threads for short subarrays
+                    }
                     endIndex = pivotIndex--;                                         // Re-sort bigger part of the array in the current loo
-                    // New pivot is the element immediately left of the old pivot
+                                                                                     // New pivot is the element immediately left of the old pivot
                     len = lenLeft;                                                   // Continue sorting left partition
                 } else {
-                    if (lenLeft > 1) childTasks.add(new SortingThread(a, stIndex, pivotIndex).fork());
+                    if (lenLeft > 1) {
+                        if (lenLeft > MIN_ARRAY_TO_CREATE_THREAD) childTasks.add(new SortingThread(a, stIndex, pivotIndex).fork());
+                        else new SortingThread(a, stIndex, pivotIndex).compute();
+                    }
                     stIndex = pivotIndex + 1;
                     pivotIndex = endIndex - 1;
                     len = lenRight;                                   // lenRight contains length of longest of two subarrays
                 }
             } while (len > 1);
-            LOG.debug("Thread " + thisThreadNo + " is waiting for child threads");
+            if (LOG.isDebugEnabled()) LOG.debug("Task " + thisTaakdNo + " is waiting for subtasks to complete");
             childTasks.parallelStream().forEach(ForkJoinTask::join);
-            LOG.debug("Thread " + thisThreadNo + " completes");
+            if (LOG.isDebugEnabled()) LOG.debug("Task " + thisTaakdNo + " completes");
             return a;
         }
     }

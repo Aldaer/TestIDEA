@@ -63,26 +63,33 @@ public class QSortTest {
         }
         System.out.println();
         MilInt1 = Arrays.stream(s.split(",")).map(Integer::valueOf).toArray(Integer[]::new);
+        int million = MilInt1.length;
+        MilInt2 = new Integer[million];
 
         QSort<Integer> qS = new QSort<>((o1, o2) -> o1-o2);
         QSort2<Integer> qA = new QSort2<>((o1, o2) -> o1-o2);
 
         System.out.println("Synchronous sorting");
 
-        MilInt2 = Arrays.copyOf(MilInt1, MilInt1.length);
         long d1 = new Date().getTime();
-        qS.sort(MilInt2);
+        for (int i = 0; ++i < 50; ) {
+            System.arraycopy(MilInt1, 0, MilInt2, 0, million);
+            qS.sort(MilInt2);
+        }
         d1 = new Date().getTime() - d1;
         System.out.printf("Sorting of a %d-element array took %d ms\n", MilInt1.length, d1);
         TextFileNonblockingIO.writeStringIntoFile("d:\\out_sync.txt", Arrays.toString(MilInt2));
 
-        System.out.println("Asynchronous sorting");
+        System.out.print("Asynchronous sorting");
 
-        MilInt2 = Arrays.copyOf(MilInt1, MilInt1.length);
         d1 = new Date().getTime();
-        qA.sort(MilInt2).get();
+        for (int i = 0; ++i < 50; ) {
+            System.arraycopy(MilInt1, 0, MilInt2, 0, million);
+
+            qA.sort(MilInt2).get();
+        }
         d1 = new Date().getTime() - d1;
-        System.out.printf("Sorting of the same array took %d ms\n", d1);
+        System.out.printf("\nSorting of the same array took %d ms\n", d1);
         TextFileNonblockingIO.writeStringIntoFile("d:\\out_async.txt", Arrays.toString(MilInt2)).get();
     }
 }
