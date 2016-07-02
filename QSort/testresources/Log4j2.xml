@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="INFO" name="example-config">
     <Properties>
-        <Property name="LOG_DIR">D:/logs</Property>
+        <Property name="LOG_DIR">../logs</Property>
         <Property name="ARCHIVE">${LOG_DIR}/archive</Property>
         <Property name="PATTERN">%-5level %d [%t] %c:%M(%L): %m%n</Property>
     </Properties>
@@ -11,14 +11,14 @@
         </Console>
 
         <RollingFile name="fileWriter"
-                     fileName="${LOG_DIR}/example1.log"
-                     filePattern="${ARCHIVE}/example1.log.%d{yyyy-MM-dd-hh-mm}.gz">
+                     fileName="${LOG_DIR}/qsort.log"
+                     filePattern="${ARCHIVE}/qsort.%d{yyyy-MM-dd-hh-mm}.log.gz">
             <PatternLayout pattern="${PATTERN}"/>
             <TimeBasedTriggeringPolicy/>
         </RollingFile>
     </Appenders>
     <Loggers>
-        <Root level="INFO">
+        <Root level="DEBUG">
             <AppenderRef ref="fileWriter"/>
         </Root>
     </Loggers>

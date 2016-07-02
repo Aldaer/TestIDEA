@@ -26,3 +26,5 @@ bin/
 MyClass/bin/
 million_ints.txt
 *.log
+QSort/out_async.txt
+QSort/out_sync.txt

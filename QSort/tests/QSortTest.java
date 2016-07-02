@@ -9,6 +9,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public class QSortTest {
+    private static final int SORTING_ROUNDS = 50;
+
     @Test
     public void sortArray() throws InterruptedException, ExecutionException {
         Integer[] a1 = { 8,13,2,10,6,14,4,5,7,12,11,9,3,15,1,0 };
@@ -30,15 +32,15 @@ public class QSortTest {
 
         QSort2<Integer> q2 = new QSort2<>((o1, o2) -> o1-o2);
 
-        Future<Integer[]> sorter1 = q2.sort(a1b);
-        Future<Integer[]> sorter2 = q2.sort(a2b);
+        Future<Integer[]> sorter1 = q2.sort(a1b, "A");
+        Future<Integer[]> sorter2 = q2.sort(a2b, "B");
         System.out.print("Asynchronous sorting");
         while (! (sorter1.isDone() && sorter2.isDone())) {
             try {
                 sorter1.get(200, TimeUnit.MILLISECONDS);
                 sorter2.get(200, TimeUnit.MILLISECONDS);
             } catch (TimeoutException to) {
-            System.out.print('.');
+                System.out.print('.');
             }
         }
         System.out.println();
@@ -48,23 +50,23 @@ public class QSortTest {
 
     @Test
     public void LargeQSortTest() throws Exception {
-        Integer[] MilInt1;
-        Integer[] MilInt2;
+        Integer[] MilInt_unsorted;
+        Integer[] MilInt;
 
         System.out.println("Current default path is " + Paths.get("").toAbsolutePath().toString());
         System.out.print("Reading input file");
         Future<String> ints = TextFileNonblockingIO.readFileIntoString("million_ints.txt");
         String s;
         while(true) try {
-            s = ints.get(200, TimeUnit.MILLISECONDS);
+            s = ints.get(10, TimeUnit.MILLISECONDS);
             break;
         } catch (TimeoutException to) {
             System.out.print('.');
         }
         System.out.println();
-        MilInt1 = Arrays.stream(s.split(",")).map(Integer::valueOf).toArray(Integer[]::new);
-        int million = MilInt1.length;
-        MilInt2 = new Integer[million];
+        MilInt_unsorted = Arrays.stream(s.split(",")).map(Integer::valueOf).toArray(Integer[]::new);
+        int million = MilInt_unsorted.length;
+        MilInt = new Integer[million];
 
         QSort<Integer> qS = new QSort<>((o1, o2) -> o1-o2);
         QSort2<Integer> qA = new QSort2<>((o1, o2) -> o1-o2);
@@ -72,24 +74,23 @@ public class QSortTest {
         System.out.println("Synchronous sorting");
 
         long d1 = new Date().getTime();
-        for (int i = 0; ++i < 50; ) {
-            System.arraycopy(MilInt1, 0, MilInt2, 0, million);
-            qS.sort(MilInt2);
+        for (int i = 0; i++ < SORTING_ROUNDS; ) {
+            System.arraycopy(MilInt_unsorted, 0, MilInt, 0, million);
+            qS.sort(MilInt);
         }
         d1 = new Date().getTime() - d1;
-        System.out.printf("Sorting of a %d-element array took %d ms\n", MilInt1.length, d1);
-        TextFileNonblockingIO.writeStringIntoFile("d:\\out_sync.txt", Arrays.toString(MilInt2));
+        System.out.printf("Sorting of a %d-element array took %d ms\n", MilInt_unsorted.length, d1);
+        TextFileNonblockingIO.writeStringIntoFile("out_sync.txt", Arrays.toString(MilInt));
 
         System.out.print("Asynchronous sorting");
 
         d1 = new Date().getTime();
-        for (int i = 0; ++i < 50; ) {
-            System.arraycopy(MilInt1, 0, MilInt2, 0, million);
-
-            qA.sort(MilInt2).get();
+        for (int i = 0; i++ < SORTING_ROUNDS; ) {
+            System.arraycopy(MilInt_unsorted, 0, MilInt, 0, million);
+            qA.sort(MilInt, "A" + i).get();
         }
         d1 = new Date().getTime() - d1;
         System.out.printf("\nSorting of the same array took %d ms\n", d1);
-        TextFileNonblockingIO.writeStringIntoFile("d:\\out_async.txt", Arrays.toString(MilInt2)).get();
+        TextFileNonblockingIO.writeStringIntoFile("out_async.txt", Arrays.toString(MilInt)).get();
     }
 }
