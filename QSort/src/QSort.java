@@ -6,13 +6,14 @@ import java.util.Comparator;
 /**
  * I'm trying to write QSort implementation, too!
  */
+@SuppressWarnings("WeakerAccess")
 public class QSort<T> {
 
     public QSort(Comparator<T> sortRule) {
         cmp = sortRule;
     }
 
-    final static Logger LOG = LogManager.getLogger();
+    private final static Logger LOG = LogManager.getLogger();
 
     /**
      * Sort array inArray starting at [stIndex] and ending at [endIndex-1]
@@ -21,7 +22,7 @@ public class QSort<T> {
         if (arrayToSort == null || arrayToSort.length <= 1) return;
         a = arrayToSort;
 
-        LOG.debug("Now starting to sort array of " + arrayToSort.length + " elements");
+        if (LOG.isDebugEnabled()) LOG.debug("Now starting to sort array of " + arrayToSort.length + " elements");
         callNo = 0;
         sortArray(0, a.length);
     }
@@ -37,7 +38,7 @@ public class QSort<T> {
         len = endIndex - stIndex;
         int thisCallNo = ++callNo;
 
-        LOG.debug("Launching sort routine #" + thisCallNo + " to sort elements " + stIndex + " to " + (endIndex - 1));
+        if (LOG.isTraceEnabled()) LOG.trace("Launching sort routine #" + thisCallNo + " to sort elements " + stIndex + " to " + (endIndex - 1));
 
         do {                                          // Main sorting loop
 
@@ -47,8 +48,7 @@ public class QSort<T> {
                     a[pivotIndex] = a[stIndex];
                     a[stIndex] = pivot;
                 }
-                LOG.debug("Call " + thisCallNo + " returned");
-                return;
+                break;
             }
 
 
@@ -74,6 +74,6 @@ public class QSort<T> {
             }
         } while (len > 1);
 
-        LOG.debug("Call " + thisCallNo + " returned");
+        if (LOG.isTraceEnabled()) LOG.trace("Call " + thisCallNo + " returned");
     }
 }

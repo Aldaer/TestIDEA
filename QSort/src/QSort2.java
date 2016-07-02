@@ -5,17 +5,17 @@ import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 2nd version, with multithreading
+ * 3rd version sorter class, with multithreading and simultaneous asynchronous sorting of several arrays
  */
 @SuppressWarnings("WeakerAccess")
 public class QSort2<T> {
-    private final static int MIN_ARRAY_TO_CREATE_THREAD = 2_000;    // Determined experimentally
+    private final static int MIN_ARRAY_TO_FORK = 2_000;    // Determined experimentally for max performance with single-array sorting
 
     private final Comparator<T> cmp;
-    private ForkJoinPool pool;
-    private int threadNo;
+    private final ForkJoinPool pool;                                // Single common pool for all sorting tasks performed with this sorter instance
 
     private final static Logger LOG = LogManager.getLogger();
 
@@ -26,6 +26,7 @@ public class QSort2<T> {
      */
     public QSort2(Comparator<T> sortRule) {
         cmp = sortRule;
+        pool = new ForkJoinPool();
     }
 
     /**
@@ -35,85 +36,126 @@ public class QSort2<T> {
      * @return Future containing sorted array
      */
     public Future<T[]> sort(final T[] arrayToSort) {
+        return sort(arrayToSort, "");
+    }
 
-
+    public Future<T[]> sort(final T[] arrayToSort, String tag) {
         if (arrayToSort == null || arrayToSort.length <= 1) return CompletableFuture.completedFuture(arrayToSort);
-        pool = new ForkJoinPool();
 
-        if (LOG.isDebugEnabled()) LOG.debug("Now starting to sort array of " + arrayToSort.length + " elements");
-        threadNo = 0;
-        return pool.submit(new SortingTask(arrayToSort, 0, arrayToSort.length));
+        if (LOG.isDebugEnabled()) LOG.debug("Now starting to sort array " + (tag == null || tag.equals("")? "" : "[" + tag + "] ") + "of " + arrayToSort.length + " elements");
+
+        return new SortingEnvironment(arrayToSort, tag).invoke();
     }
 
-    @SuppressWarnings("UnnecessaryLabelOnBreakStatement")
-    private class SortingTask extends RecursiveTask<T[]> {
-        private T[] a;                                          // Array to sort
 
-        private int stIndex;
-        private int endIndex;
+    /**
+     * Class to hold all info pertaining to a single sorting operation
+     */
+    private class SortingEnvironment {
+        private final T[] a;
+        private AtomicInteger activeTaskNo;
+        private AtomicInteger taskNo;
+        private CompletableFuture<T[]> sortedArray;
 
-        private int thisTaskNo;
+        private String tag = "";         // To mark simultaneously sorted arrays for debugging purposes
 
-        private SortingTask(T[] arrayToSort, int stIndex, int endIndex) {
-            a = arrayToSort;
-            thisTaskNo = ++threadNo;
-            this.stIndex = stIndex;
-            this.endIndex = endIndex;
-            if (LOG.isDebugEnabled()) LOG.debug("Creating task #" + thisTaskNo + " to sort elements " + stIndex + " to " + (endIndex - 1));
+        private SortingEnvironment(T[] arrayToSort) {
+            this.a = arrayToSort;
+            taskNo = new AtomicInteger(0);
+            activeTaskNo = new AtomicInteger(0);
         }
 
-        @Override
-        protected T[] compute() {
-            T pivot;
-            int len;
-            int pivotIndex = endIndex - 1;
-            len = endIndex - stIndex;
-
-            List<ForkJoinTask<?>> childTasks = new LinkedList<>();
-
-            MainLoop:
-            do {                                          // Main sorting loop
-
-                pivot = a[pivotIndex];
-                if (len == 2) {
-                    if (cmp.compare(pivot, a[stIndex]) < 0) {
-                        a[pivotIndex] = a[stIndex];
-                        a[stIndex] = pivot;
-                    }
-                    break MainLoop;
-                }
-
-                for (int i = pivotIndex - 1; i >= stIndex; i--) {
-                    if (cmp.compare(pivot, a[i]) < 0) {                // Increase right partition, move element there
-                        a[pivotIndex--] = a[i];
-                        a[i] = a[pivotIndex];
-                        a[pivotIndex] = pivot;                                      // Everything > pivot is located from [pivotIndex+1] to [endIndex-1]
-                    }                                                               // Everything in [stIndex - pivotIndex] is <= pivot
-                }
-                int lenRight = endIndex - (pivotIndex + 1);                         // Subarray of big elements, length >=0
-                int lenLeft = pivotIndex - stIndex;                                 // Subarray of small elements, length >=0
-                if (lenRight < lenLeft) {
-                    if (lenRight > 1) {
-                        if (lenRight > MIN_ARRAY_TO_CREATE_THREAD) childTasks.add(new SortingTask(a, pivotIndex + 1, endIndex).fork());
-                        else new SortingTask(a, pivotIndex + 1, endIndex).compute();          // Do not create threads for short subarrays
-                    }
-                    endIndex = pivotIndex--;                                         // Re-sort bigger part of the array in the current loo
-                                                                                     // New pivot is the element immediately left of the old pivot
-                    len = lenLeft;                                                   // Continue sorting left partition
-                } else {
-                    if (lenLeft > 1) {
-                        if (lenLeft > MIN_ARRAY_TO_CREATE_THREAD) childTasks.add(new SortingTask(a, stIndex, pivotIndex).fork());
-                        else new SortingTask(a, stIndex, pivotIndex).compute();
-                    }
-                    stIndex = pivotIndex + 1;
-                    pivotIndex = endIndex - 1;
-                    len = lenRight;                                   // lenRight contains length of longest of two subarrays
-                }
-            } while (len > 1);
-            if (LOG.isDebugEnabled()) LOG.debug("Task " + thisTaskNo + " is waiting for subtasks to complete");
-            childTasks.parallelStream().forEach(ForkJoinTask::join);
-            if (LOG.isDebugEnabled()) LOG.debug("Task " + thisTaskNo + " completes");
-            return a;
+        private SortingEnvironment(T[] arrayToSort, String tag) {
+            this(arrayToSort);
+            if (tag != null) this.tag = tag;
         }
-    }
+
+        /**
+         * Launches anynchronous sorting and returns a future to the expected result
+         * @return Future sorting result
+         */
+        public Future<T[]> invoke() {
+            sortedArray = new CompletableFuture<>();
+            pool.execute(new SortingTask(0, a.length));
+            return sortedArray;
+        }
+
+        @SuppressWarnings("UnnecessaryLabelOnBreakStatement")
+        private class SortingTask extends RecursiveAction {
+            private int stIndex;
+            private int endIndex;
+            private final int thisTaskNo;
+
+            private SortingTask(int stIndex, int endIndex) {
+                thisTaskNo = taskNo.incrementAndGet();
+                activeTaskNo.incrementAndGet();
+                this.stIndex = stIndex;
+                this.endIndex = endIndex;
+                if (LOG.isTraceEnabled())
+                    LOG.trace("Creating task " + (tag.equals("")? "" : tag + "-") + thisTaskNo + " to sort elements " + stIndex + " to " + (endIndex - 1));
+            }
+
+            /**
+             * Main sorting method. Do NOT call with 0- or 1-item-long arrays: this condition isn't checked.
+             * Last subtask to finish completes the sortedArray future and sets the result
+             */
+            @Override
+            protected void compute() {
+                T pivot;
+                int len = endIndex - stIndex;
+                int pivotIndex = endIndex - 1;
+
+                MainSortingLoop:
+                do {
+
+                    pivot = a[pivotIndex];
+                    if (len == 2) {
+                        if (cmp.compare(pivot, a[stIndex]) < 0) {
+                            a[pivotIndex] = a[stIndex];
+                            a[stIndex] = pivot;
+                        }
+                        break MainSortingLoop;
+                    }
+
+                    for (int i = pivotIndex - 1; i >= stIndex; i--) {
+                        if (cmp.compare(pivot, a[i]) < 0) {                // Increase right partition, move element there
+                            a[pivotIndex--] = a[i];
+                            a[i] = a[pivotIndex];
+                            a[pivotIndex] = pivot;                                       // Everything > pivot is located from [pivotIndex+1] to [endIndex-1]
+                        }                                                                // Everything in [stIndex - pivotIndex] is <= pivot
+                    }
+                    int lenRight = endIndex - (pivotIndex + 1);                          // Subarray of big elements, length >=0
+                    int lenLeft = pivotIndex - stIndex;                                  // Subarray of small elements, length >=0
+                    if (lenRight < lenLeft) {
+                        if (lenRight > 1) {                                              // Does the partition need sorting?
+                            if (lenRight >= MIN_ARRAY_TO_FORK)
+                                new SortingTask(pivotIndex + 1, endIndex).fork();        // Create subtasks for LONG subarrays
+                            else
+                                new SortingTask(pivotIndex + 1, endIndex).compute();     // Do not create subtasks for SHORT subarrays
+                        }
+                        endIndex = pivotIndex--;                                         // Re-sort bigger part of the array in the current loop
+                                                                                         // New pivot will be the element immediately left of the old pivot
+                        len = lenLeft;                                                   // Continue sorting left partition
+                    } else {
+                        if (lenLeft > 1) {
+                            if (lenLeft >= MIN_ARRAY_TO_FORK)
+                                new SortingTask(stIndex, pivotIndex).fork();
+                            else new SortingTask(stIndex, pivotIndex).compute();
+                        }
+                        stIndex = pivotIndex + 1;
+                        pivotIndex = endIndex - 1;
+                        len = lenRight;                                                  // Continue sorting right partition
+                    }
+                } while (len > 1);
+
+                int remaining = activeTaskNo.decrementAndGet();
+                if (LOG.isTraceEnabled()) LOG.trace("Task " + (tag.equals("")? "" : tag + "-") + thisTaskNo + " completes, " + remaining + " remains");
+                if (remaining == 0) {                                             // Last (sub)task to complete finalizes the result
+                    if (LOG.isTraceEnabled()) LOG.trace("Completing the future...");
+                    sortedArray.complete(a);
+                    if (LOG.isDebugEnabled()) LOG.debug("Calculation " + (tag.equals("")? "" : "[" + tag + "] ") + "complete");
+                }
+            } // compute()
+        } // SortingTask
+    } // SortingEnvironment
 }
