@@ -42,24 +42,24 @@ public class QSort2<T> {
 
         if (LOG.isDebugEnabled()) LOG.debug("Now starting to sort array of " + arrayToSort.length + " elements");
         threadNo = 0;
-        return pool.submit(new SortingThread(arrayToSort, 0, arrayToSort.length));
+        return pool.submit(new SortingTask(arrayToSort, 0, arrayToSort.length));
     }
 
     @SuppressWarnings("UnnecessaryLabelOnBreakStatement")
-    private class SortingThread extends RecursiveTask<T[]> {
+    private class SortingTask extends RecursiveTask<T[]> {
         private T[] a;                                          // Array to sort
 
         private int stIndex;
         private int endIndex;
 
-        private int thisTaakdNo;
+        private int thisTaskNo;
 
-        private SortingThread(T[] arrayToSort, int stIndex, int endIndex) {
+        private SortingTask(T[] arrayToSort, int stIndex, int endIndex) {
             a = arrayToSort;
-            thisTaakdNo = ++threadNo;
+            thisTaskNo = ++threadNo;
             this.stIndex = stIndex;
             this.endIndex = endIndex;
-            if (LOG.isDebugEnabled()) LOG.debug("Creating task #" + thisTaakdNo + " to sort elements " + stIndex + " to " + (endIndex - 1));
+            if (LOG.isDebugEnabled()) LOG.debug("Creating task #" + thisTaskNo + " to sort elements " + stIndex + " to " + (endIndex - 1));
         }
 
         @Override
@@ -94,25 +94,25 @@ public class QSort2<T> {
                 int lenLeft = pivotIndex - stIndex;                                 // Subarray of small elements, length >=0
                 if (lenRight < lenLeft) {
                     if (lenRight > 1) {
-                        if (lenRight > MIN_ARRAY_TO_CREATE_THREAD) childTasks.add(new SortingThread(a, pivotIndex + 1, endIndex).fork());
-                        else new SortingThread(a, pivotIndex + 1, endIndex).compute();          // Do not create threads for short subarrays
+                        if (lenRight > MIN_ARRAY_TO_CREATE_THREAD) childTasks.add(new SortingTask(a, pivotIndex + 1, endIndex).fork());
+                        else new SortingTask(a, pivotIndex + 1, endIndex).compute();          // Do not create threads for short subarrays
                     }
                     endIndex = pivotIndex--;                                         // Re-sort bigger part of the array in the current loo
                                                                                      // New pivot is the element immediately left of the old pivot
                     len = lenLeft;                                                   // Continue sorting left partition
                 } else {
                     if (lenLeft > 1) {
-                        if (lenLeft > MIN_ARRAY_TO_CREATE_THREAD) childTasks.add(new SortingThread(a, stIndex, pivotIndex).fork());
-                        else new SortingThread(a, stIndex, pivotIndex).compute();
+                        if (lenLeft > MIN_ARRAY_TO_CREATE_THREAD) childTasks.add(new SortingTask(a, stIndex, pivotIndex).fork());
+                        else new SortingTask(a, stIndex, pivotIndex).compute();
                     }
                     stIndex = pivotIndex + 1;
                     pivotIndex = endIndex - 1;
                     len = lenRight;                                   // lenRight contains length of longest of two subarrays
                 }
             } while (len > 1);
-            if (LOG.isDebugEnabled()) LOG.debug("Task " + thisTaakdNo + " is waiting for subtasks to complete");
+            if (LOG.isDebugEnabled()) LOG.debug("Task " + thisTaskNo + " is waiting for subtasks to complete");
             childTasks.parallelStream().forEach(ForkJoinTask::join);
-            if (LOG.isDebugEnabled()) LOG.debug("Task " + thisTaakdNo + " completes");
+            if (LOG.isDebugEnabled()) LOG.debug("Task " + thisTaskNo + " completes");
             return a;
         }
     }
