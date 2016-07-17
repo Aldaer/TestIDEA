@@ -8,6 +8,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.Arrays;
 import java.util.Locale;
 
 import static IOHelp.IOHelper.readln;
@@ -40,6 +41,14 @@ public class MyClass {
 
         writeln("b1=b2? " + (b1 == b2));
         writeln("b3=b4? " + (b3 == b4));*/
+
+        Integer[] arrI = new Integer[5];
+        for (Integer x : arrI) {
+            x = 1;
+        }
+        System.out.println(Arrays.toString(arrI));
+
+
 
         ZonedDateTime zdt = ZonedDateTime.now();
         DateTimeFormatter ru = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL, FormatStyle.FULL).withLocale(Locale.forLanguageTag("ru")).withZone(ZoneId.of("Europe/Moscow"));
