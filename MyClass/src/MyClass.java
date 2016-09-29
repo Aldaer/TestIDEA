@@ -3,7 +3,6 @@
  */
 
 import java.io.PrintStream;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -11,14 +10,24 @@ import java.time.format.FormatStyle;
 import java.util.Arrays;
 import java.util.Locale;
 
-import static IOHelp.IOHelper.readln;
 import static IOHelp.IOHelper.writeln;
+
+abstract class C1 {
+    abstract int op1();
+}
 
 public class MyClass {
     private PrintStream out;
 
     public static void main(String[] args) {
         writeln("Hello there!");
+        Integer a = null;
+        System.out.println(((Integer)1).equals(a));
+        try {
+            System.out.println(a.equals(1));
+        }catch (NullPointerException e) {
+            System.out.println("Cannot do that!");
+        }
 
 /*        int a=1, b=2;
         writeln("1/2 = " + a/b);
